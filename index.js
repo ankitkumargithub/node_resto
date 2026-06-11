@@ -1,9 +1,10 @@
 const express = require('express');
 const app = express();
 const db = require('./db');
+const Person = require('./models/Person');
 require('dotenv').config();
-const passport = require('passport');
-const localStrategy = require('passport-local').Strategy;
+const passport = require('./auth.js');
+
 
 const PORT = process.env.PORT || 3000;
 const bodyParser = require('body-parser');
@@ -16,15 +17,10 @@ const logger = (req, res, next) => {
     next();
 };
 
-app.use(new localStrategy((username, password, done) => {
-    // Here you would typically query your database to find the user and verify the password
-    try{
 
-    }catch(err){
-        return done(err);
-    }
-}));
 
+app.use(passport.initialize());
+const localAuthMiddleware = passport.authenticate('local', {session: false});
 
 app.get('/', (req, res) => {
     res.send('Hello World this is my first node js app');
