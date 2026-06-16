@@ -1,4 +1,5 @@
 const mongose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 const personSchema = new mongose.Schema({
     name: {
@@ -44,12 +45,12 @@ personSchema.pre('save', async function(next){
     const person = this;
     if(! person.isModified('password')) return next();
     try{
-        const salt = await bcrypt.getSalt(10);
+        const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(person.password, salt);
         person.password = hashedPassword;
         next();
     }catch(err){
-        //return next(err);
+        return next(err);
     }
 });
 
