@@ -3,6 +3,8 @@ const express = require('express');
 const router = express.Router();
 const Person = require('./../models/Person');
 
+const {jwtMiddleware, generateToken} = require('./../jwt.js');
+
 
 router.post('/signup', async(req, res) => {
     try{
@@ -11,7 +13,14 @@ router.post('/signup', async(req, res) => {
 
     const response = await person.save();
     console.log('Person saved successfully:', response);
-    res.status(201).json(response);
+
+    const payload = {
+        id: response.id,
+        username: response.username,
+    }
+    const token = generateToken(payload);
+
+    res.status(201).json({response: response, token: token});
 
     }catch(error){
         console.log('Error saving person:', error);
@@ -20,7 +29,51 @@ router.post('/signup', async(req, res) => {
     }
 });
 
-router.get('/', async(req, res) => {
+//login route
+
+router.post('/login', async(req, res) => {
+    try{
+        const {username, password} = req.body;
+        const person = await Person.findOne({ username: username });
+
+        if(!person || !await person.comparePassword(password)){
+            return res.status(401).json({ message: 'Invalid username or password'});
+        }
+
+        // Generate JWT token
+
+        const payload = {
+            id: person.id,
+            username: person.username,
+        }
+        const token = generateToken(payload);
+
+        res.status(200).json({ message: 'Login successful', token: token});
+    }
+    catch(error){
+        console.log('Error during login:', error);
+        res.status(500).json({ error: 'Error during login', details: error });
+    }
+});
+
+//profile route
+router.get('/profile', jwtMiddleware, async(req, res) => {
+    try{
+        const userData = req.user;
+        console.log('User data from token:', userData);
+        const person = await Person.findById(userData.id);
+        if (!person) {
+            return res.status(404).json({ error: 'Person not found' });
+        }
+        res.json(person);   
+    } catch (error) {
+        console.log('Error fetching profile:', error);
+        console.error('Error fetching profile:', error);
+        res.status(500).json({ error: 'Error fetching profile', details: error });
+    }
+});
+
+router.get('/', jwtMiddleware, async(req, res) => {
     try {
         const persons = await Person.find();
         res.json(persons);
